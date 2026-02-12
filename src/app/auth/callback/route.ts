@@ -17,12 +17,15 @@ export async function GET(request: NextRequest) {
             console.error("Auth Error in Callback:", error);
             return NextResponse.redirect(`${origin}/login?error=auth_code_error`);
         }
+
+        // Debug: Check if session is actually set
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log("Session after exchange:", session ? "Created" : "Null");
     } else {
         console.error("No code found in callback URL");
         return NextResponse.redirect(`${origin}/login?error=no_code`);
     }
 
     console.log("Auth session exchanged successfully. Redirecting to dashboard.");
-    // URL to redirect to after sign in process completes
     return NextResponse.redirect(`${origin}/dashboard`);
 }

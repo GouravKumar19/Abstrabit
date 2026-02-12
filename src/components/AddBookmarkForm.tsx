@@ -1,32 +1,38 @@
 "use client";
 
 import { addBookmark } from "@/app/actions";
-import { useFormStatus } from "react-dom";
-import { useRef } from "react";
-
-function SubmitButton() {
-    const { pending } = useFormStatus();
-
-    return (
-        <button
-            type="submit"
-            disabled={pending}
-            className="ml-4 inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 dark:focus:ring-offset-gray-800"
-        >
-            {pending ? "Adding..." : "Add"}
-        </button>
-    );
-}
+import { useRef, useState } from "react";
 
 export default function AddBookmarkForm() {
     const formRef = useRef<HTMLFormElement>(null);
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setLoading(true);
+
+        const formData = new FormData(event.currentTarget);
+
+        try {
+            // Pass a dummy state object as first argument to match the Server Action signature
+            const result = await addBookmark(null, formData);
+
+            if (result?.message === "Success") {
+                formRef.current?.reset();
+            } else if (result?.message) {
+                alert(result.message);
+            }
+        } catch (error) {
+            console.error("Error adding bookmark:", error);
+            alert("Failed to add bookmark");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <form
-            action={async (formData) => {
-                await addBookmark(null, formData);
-                formRef.current?.reset();
-            }}
+            onSubmit={handleSubmit}
             ref={formRef}
             className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end"
         >
@@ -66,7 +72,13 @@ export default function AddBookmarkForm() {
                     />
                 </div>
             </div>
-            <SubmitButton />
+            <button
+                type="submit"
+                disabled={loading}
+                className="ml-4 inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 dark:focus:ring-offset-gray-800"
+            >
+                {loading ? "Adding..." : "Add"}
+            </button>
         </form>
     );
 }

@@ -13,10 +13,10 @@ const schema = z.object({
 export async function addBookmark(prevState: any, formData: FormData) {
     const supabase = createClient();
     const {
-        data: { session },
-    } = await supabase.auth.getSession();
+        data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user) {
         return { message: "Unauthorized" };
     }
 
@@ -36,13 +36,14 @@ export async function addBookmark(prevState: any, formData: FormData) {
             data: {
                 title,
                 url,
-                userId: session.user.id,
+                userId: user.id,
             },
         });
 
         revalidatePath("/dashboard");
         return { message: "Success" };
     } catch (e) {
+        console.error(e);
         return { message: "Failed to create bookmark" };
     }
 }
@@ -50,10 +51,10 @@ export async function addBookmark(prevState: any, formData: FormData) {
 export async function deleteBookmark(id: string) {
     const supabase = createClient();
     const {
-        data: { session },
-    } = await supabase.auth.getSession();
+        data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user) {
         return { message: "Unauthorized" };
     }
 
@@ -63,7 +64,7 @@ export async function deleteBookmark(id: string) {
             where: { id },
         });
 
-        if (!bookmark || bookmark.userId !== session.user.id) {
+        if (!bookmark || bookmark.userId !== user.id) {
             return { message: "Unauthorized" };
         }
 
@@ -74,6 +75,7 @@ export async function deleteBookmark(id: string) {
         revalidatePath("/dashboard");
         return { message: "Success" };
     } catch (e) {
+        console.error(e);
         return { message: "Failed to delete bookmark" };
     }
 }

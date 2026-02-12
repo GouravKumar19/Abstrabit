@@ -30,7 +30,7 @@ export default function Home() {
             <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
           </Link>
           <Link
-            href="https://github.com/your-repo"
+            href="https://github.com/GouravKumar19/Abstrabit"
             target="_blank"
             className="px-8 py-4 rounded-full bg-white/50 text-gray-900 font-semibold border border-gray-200 transition-all hover:bg-white/80 hover:shadow-lg dark:bg-black/50 dark:text-white dark:border-gray-700"
           >

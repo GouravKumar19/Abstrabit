@@ -31,14 +31,14 @@ export default function BookmarkList({
                     event: "*",
                     schema: "public",
                     table: "bookmarks",
-                    filter: `user_id=eq.${userId}`,
                 },
                 (payload) => {
                     console.log("Realtime event received:", payload.eventType, payload);
                     if (payload.eventType === "INSERT") {
                         const newBookmark = payload.new as any;
+                        // Only process bookmarks for this user
+                        if (newBookmark.user_id !== userId) return;
                         setBookmarks((prev) => {
-                            // Avoid duplicates
                             if (prev.some(b => b.id === newBookmark.id)) return prev;
                             return [
                                 {
@@ -55,6 +55,7 @@ export default function BookmarkList({
                         );
                     } else if (payload.eventType === "UPDATE") {
                         const updatedBookmark = payload.new as any;
+                        if (updatedBookmark.user_id !== userId) return;
                         setBookmarks((prev) =>
                             prev.map((bookmark) =>
                                 bookmark.id === updatedBookmark.id

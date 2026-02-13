@@ -3,7 +3,7 @@
 import { deleteBookmark } from "@/app/actions";
 import { createClient } from "@/lib/supabase/client";
 import { SafeBookmark } from "@/types";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Trash2, ExternalLink } from "lucide-react";
 
 interface BookmarkListProps {
@@ -16,7 +16,7 @@ export default function BookmarkList({
     userId,
 }: BookmarkListProps) {
     const [bookmarks, setBookmarks] = useState<SafeBookmark[]>(initialBookmarks);
-    const supabase = createClient();
+    const supabase = useMemo(() => createClient(), []);
 
     useEffect(() => {
         setBookmarks(initialBookmarks);
@@ -34,16 +34,21 @@ export default function BookmarkList({
                     filter: `user_id=eq.${userId}`,
                 },
                 (payload) => {
+                    console.log("Realtime event received:", payload.eventType, payload);
                     if (payload.eventType === "INSERT") {
                         const newBookmark = payload.new as any;
-                        setBookmarks((prev) => [
-                            {
-                                ...newBookmark,
-                                createdAt: newBookmark.created_at,
-                                userId: newBookmark.user_id,
-                            } as SafeBookmark,
-                            ...prev,
-                        ]);
+                        setBookmarks((prev) => {
+                            // Avoid duplicates
+                            if (prev.some(b => b.id === newBookmark.id)) return prev;
+                            return [
+                                {
+                                    ...newBookmark,
+                                    createdAt: newBookmark.created_at,
+                                    userId: newBookmark.user_id,
+                                } as SafeBookmark,
+                                ...prev,
+                            ];
+                        });
                     } else if (payload.eventType === "DELETE") {
                         setBookmarks((prev) =>
                             prev.filter((bookmark) => bookmark.id !== payload.old.id)
@@ -64,7 +69,9 @@ export default function BookmarkList({
                     }
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                console.log("Realtime subscription status:", status);
+            });
 
         return () => {
             supabase.removeChannel(channel);

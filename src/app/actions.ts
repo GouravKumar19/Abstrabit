@@ -1,6 +1,5 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -32,13 +31,16 @@ export async function addBookmark(prevState: any, formData: FormData) {
     const { title, url } = parse.data;
 
     try {
-        await prisma.bookmark.create({
-            data: {
-                title,
-                url,
-                userId: user.id,
-            },
+        const { error } = await supabase.from("bookmarks").insert({
+            title,
+            url,
+            user_id: user.id,
         });
+
+        if (error) {
+            console.error("Supabase insert error:", error);
+            return { message: "Failed to create bookmark" };
+        }
 
         revalidatePath("/dashboard");
         return { message: "Success" };
@@ -59,18 +61,16 @@ export async function deleteBookmark(id: string) {
     }
 
     try {
-        // Verify ownership
-        const bookmark = await prisma.bookmark.findUnique({
-            where: { id },
-        });
+        const { error } = await supabase
+            .from("bookmarks")
+            .delete()
+            .eq("id", id)
+            .eq("user_id", user.id);
 
-        if (!bookmark || bookmark.userId !== user.id) {
-            return { message: "Unauthorized" };
+        if (error) {
+            console.error("Supabase delete error:", error);
+            return { message: "Failed to delete bookmark" };
         }
-
-        await prisma.bookmark.delete({
-            where: { id },
-        });
 
         revalidatePath("/dashboard");
         return { message: "Success" };

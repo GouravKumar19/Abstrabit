@@ -72,7 +72,7 @@ export default async function DashboardPage() {
                 <div className="rounded-lg bg-red-50 p-6 text-red-800 dark:bg-red-900/20 dark:text-red-200">
                     <h2 className="mb-2 text-lg font-bold">Error Loading Dashboard</h2>
                     <p className="text-sm opacity-80">
-                        Please check the Vercel logs for &quot;Dashboard DB Error&quot;.
+                        Please check the Vercel logs for Dashboard DB Error.
                     </p>
                     <pre className="mt-4 overflow-auto rounded bg-black/10 p-4 text-xs">
                         {error instanceof Error ? error.message : String(error)}

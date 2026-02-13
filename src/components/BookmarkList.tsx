@@ -4,6 +4,7 @@ import { deleteBookmark } from "@/app/actions";
 import { createClient } from "@/lib/supabase/client";
 import { SafeBookmark } from "@/types";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2, ExternalLink } from "lucide-react";
 
 interface BookmarkListProps {
@@ -17,71 +18,41 @@ export default function BookmarkList({
 }: BookmarkListProps) {
     const [bookmarks, setBookmarks] = useState<SafeBookmark[]>(initialBookmarks);
     const supabase = useMemo(() => createClient(), []);
+    const router = useRouter();
 
     useEffect(() => {
         setBookmarks(initialBookmarks);
     }, [initialBookmarks]);
 
+    // Real-time: listen for broadcast messages from other tabs
     useEffect(() => {
         const channel = supabase
-            .channel("realtime-bookmarks")
-            .on(
-                "postgres_changes",
-                {
-                    event: "*",
-                    schema: "public",
-                    table: "bookmarks",
-                },
-                (payload) => {
-                    console.log("Realtime event received:", payload.eventType, payload);
-                    if (payload.eventType === "INSERT") {
-                        const newBookmark = payload.new as any;
-                        // Only process bookmarks for this user
-                        if (newBookmark.user_id !== userId) return;
-                        setBookmarks((prev) => {
-                            if (prev.some(b => b.id === newBookmark.id)) return prev;
-                            return [
-                                {
-                                    ...newBookmark,
-                                    createdAt: newBookmark.created_at,
-                                    userId: newBookmark.user_id,
-                                } as SafeBookmark,
-                                ...prev,
-                            ];
-                        });
-                    } else if (payload.eventType === "DELETE") {
-                        setBookmarks((prev) =>
-                            prev.filter((bookmark) => bookmark.id !== payload.old.id)
-                        );
-                    } else if (payload.eventType === "UPDATE") {
-                        const updatedBookmark = payload.new as any;
-                        if (updatedBookmark.user_id !== userId) return;
-                        setBookmarks((prev) =>
-                            prev.map((bookmark) =>
-                                bookmark.id === updatedBookmark.id
-                                    ? ({
-                                        ...updatedBookmark,
-                                        createdAt: updatedBookmark.created_at,
-                                        userId: updatedBookmark.user_id,
-                                    } as SafeBookmark)
-                                    : bookmark
-                            )
-                        );
-                    }
-                }
-            )
+            .channel("bookmark-sync")
+            .on("broadcast", { event: "bookmark-change" }, (payload) => {
+                console.log("Broadcast received:", payload);
+                // Refresh the page to get latest data from server
+                router.refresh();
+            })
             .subscribe((status) => {
-                console.log("Realtime subscription status:", status);
+                console.log("Broadcast subscription status:", status);
             });
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [supabase, userId]);
+    }, [supabase, router]);
 
     const handleDelete = async (id: string) => {
+        // Optimistic UI update
         setBookmarks(prev => prev.filter(b => b.id !== id));
         await deleteBookmark(id);
+
+        // Broadcast change to other tabs
+        supabase.channel("bookmark-sync").send({
+            type: "broadcast",
+            event: "bookmark-change",
+            payload: { action: "delete", id },
+        });
     };
 
     if (bookmarks.length === 0) {

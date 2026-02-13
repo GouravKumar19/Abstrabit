@@ -1,11 +1,13 @@
 "use client";
 
 import { addBookmark } from "@/app/actions";
-import { useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useRef, useMemo, useState } from "react";
 
 export default function AddBookmarkForm() {
     const formRef = useRef<HTMLFormElement>(null);
     const [loading, setLoading] = useState(false);
+    const supabase = useMemo(() => createClient(), []);
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -19,6 +21,13 @@ export default function AddBookmarkForm() {
 
             if (result?.message === "Success") {
                 formRef.current?.reset();
+
+                // Broadcast change to other tabs for real-time sync
+                await supabase.channel("bookmark-sync").send({
+                    type: "broadcast",
+                    event: "bookmark-change",
+                    payload: { action: "insert" },
+                });
             } else if (result?.message) {
                 alert(result.message);
             }

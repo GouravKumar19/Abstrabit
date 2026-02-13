@@ -65,6 +65,7 @@ export default async function DashboardPage() {
             </div>
         );
     } catch (error) {
+        // Prevent 500 error on dashboard
         console.error("Dashboard DB Error:", error);
         return (
             <div className="flex min-h-screen items-center justify-center p-8">
